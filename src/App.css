@@ -40,21 +40,52 @@
 table {
   width: 100%;
   border-collapse: collapse;
+  border-spacing: 0;
+  line-height: 1;
+  background-color: #fff;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: lightblue;
+  z-index: 10;
+  padding: 10px 0;
+}
+
+tr:nth-child(odd) {
+  background-color: #eee;
 }
 
 th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
+  border: none;
+  padding: 0;
   text-align: center;
+  border-left: 1px solid #eee;
 }
 
 .hour-block {
   width: 100%;
-  height: 20px;
-  background-color: #f2f2f2;
+  height: 25px;
+  position: relative;
+  /* background-color: #f2f2f2; */
   cursor: pointer;
 }
 
 .hour-block.selected {
   background-color: #4CAF50;
+}
+
+.hour-block.selected .time-marker {
+  color: #fff;
+}
+
+.time-marker {
+  /* position: absolute; */
+  color: #aaa;
+  font-size: 0.8em;
+  line-height: 25px;
+
 }

@@ -40,20 +40,24 @@ function App() {
       <table>
         <thead>
           <tr>
-            <th>Hour</th>
             {days.map(day => <th key={day}>{day}</th>)}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: 24 }, (_, i) => i).map(hour => (
             <tr key={hour}>
-              <td>{hour}:00</td>
               {days.map(day => (
                 <td key={day}>
                   <div
                     className={`hour-block ${hours[day]?.[hour] ? 'selected' : ''}`}
                     onClick={() => handleInputChange(day, hour)}
-                  />
+                  >
+                    {hour === 0 && <span className="time-marker">00:00</span>}
+                    {hour === 6 && <span className="time-marker">06:00</span>}
+                    {hour === 12 && <span className="time-marker">12:00</span>}
+                    {hour === 18 && <span className="time-marker">18:00</span>}
+                    {hour === 24 && <span className="time-marker">24:00</span>}
+                  </div>
                 </td>
               ))}
             </tr>
