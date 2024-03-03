@@ -22,7 +22,7 @@ function App() {
         const startHour = Math.min(...selectedHours);
         const endHour = Math.max(...selectedHours) + 1;
         const middleHour = Math.floor((startHour + endHour) / 2);
-        newPeriods[day] = { period: `${startHour}-${endHour} (${endHour - startHour} hr)`, middleHour };
+        newPeriods[day] = { period: `${startHour}-${endHour}\n${endHour - startHour} hr`, middleHour };
         total += endHour - startHour; // Add this line
       }
     }
@@ -56,7 +56,7 @@ function App() {
                         {hour === 18 && <span className="time-marker">18:00</span>}
                       </>
                     )}
-                    {periods[day] && hour === periods[day].middleHour && <span className="time-marker">{periods[day].period}</span>}
+                    {periods[day] && hour === periods[day].middleHour && <span className="time-marker" dangerouslySetInnerHTML={{ __html: periods[day].period.replace('\n', '<br />') }} />}
                   </div>
                 </td>
               ))}
