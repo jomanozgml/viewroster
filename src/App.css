@@ -1,3 +1,7 @@
+/* * {
+  transition: all 0.3s ease;
+} */
+
 .App {
   font-family: sans-serif;
   text-align: center;
@@ -13,18 +17,23 @@ table {
   border-bottom: 1px solid #eee;
 }
 
-
 tr:nth-child(odd) {
   background-color: #eee;
 }
 
-thead th {
+thead {
   position: sticky;
   top: 0;
   background: lightblue;
   z-index: 10;
 }
 
+#weekRow {
+  font-style: italic;
+  color: #eee;
+  font-size: 0.8em;
+  background-color: #555;
+}
 th, td {
   border: none;
   padding: 0;
@@ -72,3 +81,30 @@ th, td {
   z-index: 1;
   pointer-events: none;
 }
+
+a, button {
+  color: #fff;
+  text-decoration: none;
+  margin: 0 10px 10px 10px;
+  font-size: 0.9em;
+  padding: 10px 20px;
+  border: 1px solid #0abad8;
+  border-radius: 5px;
+  background-color: #0abad8;
+  box-shadow: 0 2px 2px #aaa;
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+a:hover, button:hover {
+  background-color: #fff;
+  color: #0abad8;
+  box-shadow: 0 4px 4px #aaa;
+}
+
+a:active, button:active {
+  background-color: #0abad8;
+  color: #fff;
+  box-shadow: none;
+}
+
+
