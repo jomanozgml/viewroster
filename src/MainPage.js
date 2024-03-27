@@ -1,31 +1,38 @@
 import React, { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import './MainPage.css'; // Import your CSS file
 import firebase from 'firebase/compat/app';
-import {getAuth, signOut} from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from './firebase-config';
-// import firebase from 'firebase/compat/app';
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = getAuth();
-// onAuthStateChanged(auth, (user) => {
-//   if (user) {
-
+const db = getFirestore();
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function MainPage() {
+function MainPage({ userId }) {
   const [hours, setHours] = useState({});
   const [periods, setPeriods] = useState({});
   const [totalHours, setTotalHours] = useState(0);
   const [currentWeek, setCurrentWeek] = useState('');
   const navigate = useNavigate();
 
-  const handleInputChange = (day, hour) => {
-    setHours({ ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } });
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userData = await retrieveDataFromFirestore(userId);
+        if (userData) {
+          setHours(userData.hours || {});
+        }
+      } catch (error) {
+        console.error('Error retrieving data from Firestore:', error);
+      }
+    };
+
+    fetchData();
+  }, [userId]);
 
   useEffect(() => {
     const newPeriods = {};
@@ -47,7 +54,6 @@ function MainPage() {
     setPeriods(newPeriods);
     setTotalHours(total);
 
-    // Calculate the current week
     const currentDate = new Date();
     const firstDayOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 1));
     const lastDayOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 7));
@@ -56,6 +62,12 @@ function MainPage() {
     setCurrentWeek(`Current Week (${formattedFirstDay} - ${formattedLastDay} ${lastDayOfWeek.getFullYear()})`);
   }, [hours]);
 
+  const handleInputChange = (day, hour) => {
+    const updatedHours = { ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } };
+    setHours(updatedHours);
+    saveDataToFirestore(userId, { hours: updatedHours });
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -63,6 +75,21 @@ function MainPage() {
       navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);
+    }
+  };
+
+  const saveDataToFirestore = async (userId, data) => {
+    const userDocRef = doc(db, 'users', userId);
+    await setDoc(userDocRef, data);
+  };
+
+  const retrieveDataFromFirestore = async (userId) => {
+    const userDocRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    } else {
+      return null;
     }
   };
 

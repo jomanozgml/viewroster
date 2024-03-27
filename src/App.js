@@ -10,16 +10,16 @@ firebase.initializeApp(firebaseConfig);
 const auth = getAuth();
 
 function App() {
-    const [userEmail, setUserEmail] = useState('');
+    const [userId, setUserId] = useState(null); // State to store userId
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                setUserEmail(user.email);
+                setUserId(user.uid); // Set userId if user is authenticated
                 console.log('User is signed in:', user.email);
             } else {
-                setUserEmail('');
+                setUserId(null); // Set userId to null if no user is authenticated
                 console.log('No user is signed in');
             }
             setLoading(false); // Set loading to false after checking auth state
@@ -30,15 +30,23 @@ function App() {
 
     // Render loading indicator while auth state is being checked
     if (loading) {
-        return <div>Loading...</div>;
+        return (
+            <div style={{
+                display: 'flex', justifyContent: 'center',
+                alignItems: 'center', height: '100vh',
+                fontSize: '2.4em', fontWeight: 'bold',
+                fontStyle: 'italic', color: 'gray'
+            }}> Loading... </div>
+        );
     }
 
     return (
         <div className="App">
             <Router>
                 <Routes>
-                    <Route path="/login" element={userEmail ? <Navigate to="/main" /> : <Auth />} />
-                    <Route path="/main" element={userEmail ? <MainPage /> : <Navigate to="/login" />} />
+                    <Route path="/login" element={userId ? <Navigate to="/main" /> : <Auth />} />
+                    {/* Pass userId to MainPage component */}
+                    <Route path="/main" element={userId ? <MainPage userId={userId} /> : <Navigate to="/login" />} />
                     <Route path="*" element={<Navigate to="/login" />} />
                 </Routes>
             </Router>
