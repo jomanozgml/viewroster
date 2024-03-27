@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './MainPage.css'; // Import your CSS file
+import './MainPage.css';
 import firebase from 'firebase/compat/app';
 import { getAuth, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
