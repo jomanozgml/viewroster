@@ -28,11 +28,19 @@ thead {
   z-index: 10;
 }
 
+.arrow-btn {
+  background-color: #555;
+  color: #fff;
+  cursor: pointer;
+}
+
 #weekRow {
   font-style: italic;
   color: #eee;
   font-size: 0.8em;
   background-color: #555;
+  border-left: 1px solid #555;
+  border-right: 1px solid #555;
 }
 th, td {
   border: none;
@@ -41,6 +49,16 @@ th, td {
   height: 3.3vh;
   text-align: center;
   border-left: 1px solid #eee;
+}
+
+th:hover {
+  background-color: #0abad8;
+  color: #fff;
+}
+
+th:active {
+  background-color: #555;
+  color: #fff;
 }
 
 .hour-block {

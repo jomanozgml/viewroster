@@ -17,22 +17,23 @@ function MainPage({ userId }) {
   const [periods, setPeriods] = useState({});
   const [totalHours, setTotalHours] = useState(0);
   const [currentWeek, setCurrentWeek] = useState('');
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0); // Track the current week index
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userData = await retrieveDataFromFirestore(userId);
-        if (userData) {
-          setHours(userData.hours || {});
-        }
-      } catch (error) {
-        console.error('Error retrieving data from Firestore:', error);
-      }
-    };
+     const fetchData = async () => {
+       try {
+         const userData = await retrieveDataFromFirestore(userId, currentWeekIndex);
+         if (userData) {
+           setHours(userData.hours || {});
+         }
+       } catch (error) {
+         console.error('Error retrieving data from Firestore:', error);
+       }
+     };
 
-    fetchData();
-  }, [userId]);
+     fetchData();
+  }, [userId, currentWeekIndex]);
 
   useEffect(() => {
     const newPeriods = {};
@@ -54,18 +55,27 @@ function MainPage({ userId }) {
     setPeriods(newPeriods);
     setTotalHours(total);
 
-    const currentDate = new Date();
-    const firstDayOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 1));
-    const lastDayOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 7));
-    const formattedFirstDay = firstDayOfWeek.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-    const formattedLastDay = lastDayOfWeek.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-    setCurrentWeek(`Current Week (${formattedFirstDay} - ${formattedLastDay} ${lastDayOfWeek.getFullYear()})`);
-  }, [hours]);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - startDate.getDay() + (currentWeekIndex * 7));
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+
+    const formattedStartDate = startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    const formattedEndDate = endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    setCurrentWeek(`${formattedStartDate} - ${formattedEndDate} ${endDate.getFullYear()}`);}, [hours, currentWeekIndex]);
+
+  const handlePreviousWeek = () => {
+    setCurrentWeekIndex(prevIndex => prevIndex - 1);
+ };
+
+ const handleNextWeek = () => {
+    setCurrentWeekIndex(prevIndex => prevIndex + 1);
+ };
 
   const handleInputChange = (day, hour) => {
     const updatedHours = { ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } };
     setHours(updatedHours);
-    saveDataToFirestore(userId, { hours: updatedHours });
+    saveDataToFirestore(userId, { hours: updatedHours }, currentWeekIndex);
   };
 
   const handleLogout = async () => {
@@ -78,20 +88,26 @@ function MainPage({ userId }) {
     }
   };
 
-  const saveDataToFirestore = async (userId, data) => {
-    const userDocRef = doc(db, 'users', userId);
-    await setDoc(userDocRef, data);
-  };
+  const saveDataToFirestore = async (userId, data, weekIndex) => {
+    // Assuming each user has a subcollection for weeks, and each week is a document identified by its index
+    const weekDocRef = doc(db, 'users', userId, 'weeks', weekIndex.toString());
+    await setDoc(weekDocRef, data);
+   };
 
-  const retrieveDataFromFirestore = async (userId) => {
-    const userDocRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(userDocRef);
+
+   const retrieveDataFromFirestore = async (userId, weekIndex) => {
+    // Fetch the document for the specific week
+    const weekDocRef = doc(db, 'users', userId, 'weeks', weekIndex.toString());
+    const docSnap = await getDoc(weekDocRef);
     if (docSnap.exists()) {
-      return docSnap.data();
+       return docSnap.data();
     } else {
-      return null;
+      // Show empty data if the document does not exist
+      return {};
+      //  return null;
     }
-  };
+   };
+
 
   return (
     <div className="main-div">
@@ -99,7 +115,9 @@ function MainPage({ userId }) {
       <table>
         <thead>
           <tr>
-            <th id='weekRow' colSpan={7}>{currentWeek}</th>
+            <th className="arrow-btn" onClick={handlePreviousWeek}>{'<'}</th>
+            <th id='weekRow' colSpan={5}>{currentWeek}</th>
+            <th className="arrow-btn" onClick={handleNextWeek}>{'>'}</th>
           </tr>
           <tr>
             {days.map(day => <th key={day}>{day}</th>)}
