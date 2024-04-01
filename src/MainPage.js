@@ -56,7 +56,10 @@ function MainPage({ userId }) {
     setTotalHours(total);
 
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - startDate.getDay() + (currentWeekIndex * 7));
+    const diff = startDate.getDay() - 1; // Get the difference between the current day and Monday
+    if (diff < 0) { diff += 7; } // Adjust for Sunday (0 index)
+    startDate.setDate(startDate.getDate() - diff + (currentWeekIndex * 7));
+
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 6);
 
@@ -76,6 +79,11 @@ function MainPage({ userId }) {
     const updatedHours = { ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } };
     setHours(updatedHours);
     saveDataToFirestore(userId, { hours: updatedHours }, currentWeekIndex);
+  };
+
+  const handleClearSelection = () => {
+    setHours({});
+    saveDataToFirestore(userId, { hours: {} }, currentWeekIndex);
   };
 
   const handleLogout = async () => {
@@ -104,7 +112,6 @@ function MainPage({ userId }) {
     } else {
       // Show empty data if the document does not exist
       return {};
-      //  return null;
     }
    };
 
@@ -114,7 +121,7 @@ function MainPage({ userId }) {
       <div className="watermark">Total: {totalHours} hr</div>
       <table>
         <thead>
-          <tr>
+          <tr id='weekRowHeader'>
             <th className="arrow-btn" onClick={handlePreviousWeek}>{'<'}</th>
             <th id='weekRow' colSpan={5}>{currentWeek}</th>
             <th className="arrow-btn" onClick={handleNextWeek}>{'>'}</th>
@@ -148,7 +155,7 @@ function MainPage({ userId }) {
           ))}
         </tbody>
       </table>
-      <button onClick={() => setHours({})}>Clear Selection</button>
+      <button onClick={handleClearSelection}>Clear Selection</button>
       <button onClick={handleLogout}>Logout</button>
     </div>
   );

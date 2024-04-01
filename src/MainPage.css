@@ -28,17 +28,16 @@ thead {
   z-index: 10;
 }
 
-.arrow-btn {
-  background-color: #555;
+#weekRowHeader {
+  background-color: #666;
+  height: 4.5vh;
+  font-weight: bold;
+  font-style: italic;
   color: #fff;
   cursor: pointer;
 }
 
 #weekRow {
-  font-style: italic;
-  color: #eee;
-  font-size: 0.8em;
-  background-color: #555;
   border-left: 1px solid #555;
   border-right: 1px solid #555;
 }
@@ -51,13 +50,9 @@ th, td {
   border-left: 1px solid #eee;
 }
 
-th:hover {
-  background-color: #0abad8;
-  color: #fff;
-}
 
 th:active {
-  background-color: #555;
+  background-color: #0abad8;
   color: #fff;
 }
 
@@ -113,15 +108,9 @@ a, button {
   transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
-a:hover, button:hover {
-  background-color: #fff;
-  color: #0abad8;
-  box-shadow: 0 4px 4px #aaa;
-}
-
 a:active, button:active {
-  background-color: #0abad8;
-  color: #fff;
+  background-color: #add8e6;
+  color: #666;
   box-shadow: none;
 }
 
