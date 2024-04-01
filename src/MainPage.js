@@ -56,7 +56,7 @@ function MainPage({ userId }) {
     setTotalHours(total);
 
     const startDate = new Date();
-    const diff = startDate.getDay() - 1; // Get the difference between the current day and Monday
+    let diff = startDate.getDay() - 1; // Get the difference between the current day and Monday
     if (diff < 0) { diff += 7; } // Adjust for Sunday (0 index)
     startDate.setDate(startDate.getDate() - diff + (currentWeekIndex * 7));
 
