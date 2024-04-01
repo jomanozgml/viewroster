@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSwipeable } from 'react-swipeable';
 import './MainPage.css';
 import firebase from 'firebase/compat/app';
 import { getAuth, signOut } from 'firebase/auth';
@@ -75,6 +76,13 @@ function MainPage({ userId }) {
     setCurrentWeekIndex(prevIndex => prevIndex + 1);
  };
 
+ const swipeHandlers = useSwipeable({
+  onSwipedLeft: handleNextWeek,
+  onSwipedRight: handlePreviousWeek,
+  preventDefaultTouchmoveEvent: true,
+  trackMouse: true
+});
+
   const handleInputChange = (day, hour) => {
     const updatedHours = { ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } };
     setHours(updatedHours);
@@ -117,7 +125,7 @@ function MainPage({ userId }) {
 
 
   return (
-    <div className="main-div">
+    <div className="main-div" {...swipeHandlers}>
       <div className="watermark">Total: {totalHours} hr</div>
       <table>
         <thead>
