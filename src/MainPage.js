@@ -13,28 +13,47 @@ const db = getFirestore();
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const getCurrentWeekNumber = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = (now - start) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  return Math.ceil(dayOfYear / 7) - 1;
+};
+
 function MainPage({ userId }) {
   const [hours, setHours] = useState({});
   const [periods, setPeriods] = useState({});
   const [totalHours, setTotalHours] = useState(0);
-  const [currentWeek, setCurrentWeek] = useState('');
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0); // Track the current week index
+  const [currentWeek, setCurrentWeek] = useState({ index: getCurrentWeekNumber(), startDate: null, endDate: null });
   const navigate = useNavigate();
 
   useEffect(() => {
-     const fetchData = async () => {
-       try {
-         const userData = await retrieveDataFromFirestore(userId, currentWeekIndex);
-         if (userData) {
-           setHours(userData.hours || {});
-         }
-       } catch (error) {
-         console.error('Error retrieving data from Firestore:', error);
-       }
-     };
+    const fetchData = async () => {
+      try {
+        const userData = await retrieveDataFromFirestore(userId, currentWeek.index);
+        if (userData) {
+          setHours(userData.hours || {});
+        }
+      } catch (error) {
+        console.error('Error retrieving data from Firestore:', error);
+      }
+    };
 
-     fetchData();
-  }, [userId, currentWeekIndex]);
+    fetchData();
+  }, [userId, currentWeek.index]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const currentWeekNumber = getCurrentWeekNumber();
+      if (currentWeek.index !== currentWeekNumber) {
+        setCurrentWeek(prevWeek => ({ ...prevWeek, index: currentWeekNumber }));
+      }
+    }, 1000 * 60 * 60); // Check every hour
+
+    return () => clearInterval(intervalId); // Clean up on unmount
+  }, [currentWeek.index]);
 
   useEffect(() => {
     const newPeriods = {};
@@ -57,41 +76,59 @@ function MainPage({ userId }) {
     setTotalHours(total);
 
     const startDate = new Date();
-    let diff = startDate.getDay() - 1; // Get the difference between the current day and Monday
-    if (diff < 0) { diff += 7; } // Adjust for Sunday (0 index)
-    startDate.setDate(startDate.getDate() - diff + (currentWeekIndex * 7));
+    startDate.setDate(1); // Set the date to the 1st day of the month
+    startDate.setMonth(0); // Set the month to January
+    while (startDate.getDay() !== 1) {
+      startDate.setDate(startDate.getDate() + 1); // Find the first Monday of the month
+    }
+    const currentDay = startDate.getDay(); // Get the current day of the week (0-6)
+    const diff = currentDay === 0 ? 6 : currentDay - 1; // Get the difference between the current day and Monday
+    startDate.setDate(startDate.getDate() - diff + (currentWeek.index * 7));
 
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 6);
 
     const formattedStartDate = startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
     const formattedEndDate = endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-    setCurrentWeek(`${formattedStartDate} - ${formattedEndDate} ${endDate.getFullYear()}`);}, [hours, currentWeekIndex]);
+    setCurrentWeek(prevWeek => ({ ...prevWeek, startDate: formattedStartDate, endDate: formattedEndDate }));
+  }, [hours, currentWeek.index]);
 
   const handlePreviousWeek = () => {
-    setCurrentWeekIndex(prevIndex => prevIndex - 1);
- };
+    setCurrentWeek(prevWeek => ({ ...prevWeek, index: prevWeek.index - 1 }));
+  };
 
- const handleNextWeek = () => {
-    setCurrentWeekIndex(prevIndex => prevIndex + 1);
- };
+  const handleNextWeek = () => {
+    setCurrentWeek(prevWeek => ({ ...prevWeek, index: prevWeek.index + 1 }));
+  };
 
- const swipeHandlers = useSwipeable({
-  onSwipedLeft: handleNextWeek,
-  onSwipedRight: handlePreviousWeek,
-  preventDefaultTouchmoveEvent: true,
-  trackMouse: true
-});
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: handleNextWeek,
+    onSwipedRight: handlePreviousWeek,
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: true
+  });
 
   const handleInputChange = (day, hour) => {
     const updatedHours = { ...hours, [day]: { ...hours[day], [hour]: !hours[day]?.[hour] } };
     setHours(updatedHours);
-    saveDataToFirestore(userId, { hours: updatedHours }, currentWeekIndex);
+    saveDataToFirestore(userId, { hours: updatedHours }, currentWeek.index);
+
+    // Check if there are previously selected hours in the same day
+    const selectedHours = Object.keys(updatedHours[day]).filter(hour => updatedHours[day][hour]).map(Number);
+    if (selectedHours.length > 1) {
+      const startHour = Math.min(...selectedHours);
+      const endHour = Math.max(...selectedHours);
+      for (let i = startHour + 1; i < endHour; i++) {
+        updatedHours[day][i] = true;
+      }
+      setHours(updatedHours);
+      saveDataToFirestore(userId, { hours: updatedHours }, currentWeek.index);
+    }
   };
 
   const handleClearSelection = () => {
     setHours({});
-    saveDataToFirestore(userId, { hours: {} }, currentWeekIndex);
+    saveDataToFirestore(userId, { hours: {} }, currentWeek.index);
   };
 
   const handleLogout = async () => {
@@ -108,21 +145,19 @@ function MainPage({ userId }) {
     // Assuming each user has a subcollection for weeks, and each week is a document identified by its index
     const weekDocRef = doc(db, 'users', userId, 'weeks', weekIndex.toString());
     await setDoc(weekDocRef, data);
-   };
+  };
 
-
-   const retrieveDataFromFirestore = async (userId, weekIndex) => {
+  const retrieveDataFromFirestore = async (userId, weekIndex) => {
     // Fetch the document for the specific week
     const weekDocRef = doc(db, 'users', userId, 'weeks', weekIndex.toString());
     const docSnap = await getDoc(weekDocRef);
     if (docSnap.exists()) {
-       return docSnap.data();
+      return docSnap.data();
     } else {
       // Show empty data if the document does not exist
       return {};
     }
-   };
-
+  };
 
   return (
     <div className="main-div" {...swipeHandlers}>
@@ -131,7 +166,7 @@ function MainPage({ userId }) {
         <thead>
           <tr id='weekRowHeader'>
             <th className="arrow-btn" onClick={handlePreviousWeek}>{'<'}</th>
-            <th id='weekRow' colSpan={5}>{currentWeek}</th>
+            <th id='weekRow' colSpan={5}>{currentWeek.startDate} - {currentWeek.endDate}</th>
             <th className="arrow-btn" onClick={handleNextWeek}>{'>'}</th>
           </tr>
           <tr>
