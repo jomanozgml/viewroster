@@ -1,73 +1,60 @@
-# viewroster
-Daily Roster View and Edit Web App
+# View Roster
 
-# Getting Started with Create React App
+Welcome to the View Roster project! This project aims to provide a simple and efficient way to record, view and manage roster entries. User can sign up/in and easily add, edit, and clear hour blocks for each roster entry, in a week view layout.
+> URL: [https://view-roster.web.app/](https://view-roster.web.app/)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Features
 
-## Available Scripts
+- Record and view current, past, and future roster entries
+- Add, edd and clear hour blocks for each roster entry
+- Sign up/in to access and manage roster entries
+- Get total hours worked in each week to help with payroll, time management, and work restrictions
 
-In the project directory, you can run:
+## Dependencies
+The View Roster project requires the following dependencies:
+- Frontend: HTML, CSS, JavaScript, React.js
+- Backend: Node.js, Google Cloud Platform: Firebase
+- Database: Firestore (NoSQL)
+- Authentication: Firebase Authentication
+- Hosting: Firebase Hosting
+- Version Control with CI/CD: GitHub, GitHub Actions
 
-### `npm start`
+## Getting Started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+To get started with the View Roster project, follow these steps:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+1. Clone the repository to your local machine.
+2. Install the necessary dependencies: `node.js`, `npm`, `firebase-tools`
+3. Get `firebase-config.js` after setting up a Firebase project and add it to the `src` folder.
+> Note: The `firebase-config.js` file should contain the Firebase configuration object, for example:
+```javascript
+export const firebaseConfig = {
+    apiKey = <API_KEY>,
+    ...
+};
+```
+4. Run the application using the following command: `npm start`
 
-### `npm test`
+## Usage
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Once the application is up and running, you can access the roster view by navigating to the provided url. From there, you can perform various actions such as viewing, adding, and clearing roster entries.
 
-### `npm run build`
+## Contributing
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Contributions are welcome! If you would like to contribute to the View Roster project, please follow these guidelines:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them.
+4. Push your changes to your forked repository.
+5. Submit a pull request.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## License
 
-### `npm run eject`
+This project is licensed under the GNU General Public License v3.0. For more information, see the `LICENSE` file.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Contact
+Email: manoj.shrestha8080@gmail.com
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Screenshot
+![View Roster](public/viewroster.png)
