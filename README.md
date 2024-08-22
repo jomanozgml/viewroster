@@ -1,7 +1,7 @@
 # View Roster
 
 Welcome to the View Roster project! This project aims to provide a simple and efficient way to record, view and manage roster entries. User can sign up/in and easily add, edit, and clear hour blocks for each roster entry, in a week view layout.
-> URL: [https://view-roster.web.app/](https://view-roster.web.app/)
+> *URL: [https://viewroster.web.app/](https://view-roster.web.app/)*
 
 ## Features
 
@@ -12,12 +12,12 @@ Welcome to the View Roster project! This project aims to provide a simple and ef
 
 ## Dependencies
 The View Roster project requires the following dependencies:
-- Frontend: HTML, CSS, JavaScript, React.js
-- Backend: Node.js, Google Cloud Platform: Firebase
-- Database: Firestore (NoSQL)
-- Authentication: Firebase Authentication
-- Hosting: Firebase Hosting
-- Version Control with CI/CD: GitHub, GitHub Actions
+- **Frontend**: HTML5, CSS3, JavaScript ES6, React.js
+- **Backend**: Node.js, Google Cloud Platform (Firebase)
+- **Database**: Firestore (NoSQL)
+- **Authentication**: Firebase Authentication
+- **Hosting**: Firebase Hosting
+- **Version Control with CI/CD**: GitHub, GitHub Actions
 
 ## Getting Started
 
