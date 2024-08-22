@@ -1,7 +1,7 @@
-# View Roster
+# View Roster Progessive Web App
 
 Welcome to the View Roster project! This project aims to provide a simple and efficient way to record, view and manage roster entries. User can sign up/in and easily add, edit, and clear hour blocks for each roster entry, in a week view layout.
-> *URL: [https://viewroster.web.app/](https://view-roster.web.app/)*
+> *URL: [https://viewroster.web.app/](https://viewroster.web.app/)*
 
 ## Features
 
