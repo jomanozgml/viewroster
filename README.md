@@ -57,4 +57,4 @@ This project is licensed under the GNU General Public License v3.0. For more inf
 Email: manoj.shrestha8080@gmail.com
 
 ## Screenshot
-![View Roster](public/viewroster.png)
+![View Roster Web App](public/viewroster.png)
