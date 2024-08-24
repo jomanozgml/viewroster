@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import firebase from 'firebase/compat/app';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { firebaseConfig } from './firebase-config';
+import { firebaseConfig } from './firebaseConfig';
 import Auth from './Auth';
 import MainPage from './MainPage';
 

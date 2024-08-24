@@ -5,7 +5,7 @@ import './MainPage.css';
 import firebase from 'firebase/compat/app';
 import { getAuth, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { firebaseConfig } from './firebase-config';
+import { firebaseConfig } from './firebaseConfig';
 
 firebase.initializeApp(firebaseConfig);
 const auth = getAuth();
