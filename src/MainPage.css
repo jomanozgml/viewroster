@@ -56,7 +56,7 @@ th:active {
   color: #fff;
 }
 
-.hour-block {
+.hour-block, .extra-minute-block {
   width: 100%;
   height: 100%;
   display: flex;
@@ -65,15 +65,22 @@ th:active {
   cursor: pointer;
 }
 
-.hour-block.selected {
+.extra-minute-block {
+  font-size: 0.8em;
+  color: #aaa;
+  height: 3.3vh;
+}
+
+.hour-block.selected, .extra-minute-block.selected {
   background-color: #4CAF50;
+  color: #fff;
 }
 
 .hour-block.selected .time-marker {
   color: #fff;
 }
 
-.time-marker {
+.time-marker{
   position: absolute;
   color: #aaa;
   font-size: 0.8em;
@@ -114,3 +121,38 @@ a:active, button:active {
   box-shadow: none;
 }
 
+.user-info {
+  color: #666;
+  font-size: 0.8em;
+}
+
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.confirm-dialog-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.confirm-dialog button {
+  margin: 0 10px;
+}
