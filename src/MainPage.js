@@ -15,10 +15,19 @@ const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const getCurrentWeekAndYear = () => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const diff = now - start;
+  const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+  const firstMonday = new Date(firstDayOfYear);
+
+  // Find the first Monday of the year
+  while (firstMonday.getDay() !== 1) {
+    firstMonday.setDate(firstMonday.getDate() + 1);
+  }
+
+  // Calculate the week number
+  const diff = now.getTime() - firstMonday.getTime();
   const oneWeek = 1000 * 60 * 60 * 24 * 7;
   const weekNumber = Math.floor(diff / oneWeek);
+
   return {
     week: weekNumber,
     year: now.getFullYear()
@@ -28,15 +37,17 @@ const getCurrentWeekAndYear = () => {
 const getWeekDates = (weekNumber, year) => {
   const firstDayOfYear = new Date(year, 0, 1);
   const firstMonday = new Date(firstDayOfYear);
+
+  // Find the first Monday of the year
   while (firstMonday.getDay() !== 1) {
     firstMonday.setDate(firstMonday.getDate() + 1);
   }
 
-  const targetDate = new Date(firstMonday);
-  targetDate.setDate(targetDate.getDate() + (weekNumber * 7));
+  // Calculate the start date of the specified week
+  const startDate = new Date(firstMonday);
+  startDate.setDate(startDate.getDate() + (weekNumber * 7));
 
-  const startDate = new Date(targetDate);
-  const endDate = new Date(targetDate);
+  const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 6);
 
   return {
