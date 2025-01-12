@@ -26,7 +26,18 @@ const getCurrentWeekAndYear = () => {
   // Calculate the week number
   const diff = now.getTime() - firstMonday.getTime();
   const oneWeek = 1000 * 60 * 60 * 24 * 7;
-  const weekNumber = Math.floor(diff / oneWeek);
+  let weekNumber = Math.floor(diff / oneWeek) + 1;
+
+  // Check if this week spills into the next year
+  const lastDayOfYear = new Date(now.getFullYear(), 11, 31);
+  const lastWeekMonday = new Date(lastDayOfYear);
+  while (lastWeekMonday.getDay() !== 1) {
+    lastWeekMonday.setDate(lastWeekMonday.getDate() - 1);
+  }
+
+  if (now >= lastWeekMonday) {
+    weekNumber = Math.ceil((lastDayOfYear - firstMonday) / oneWeek) + 1;
+  }
 
   return {
     week: weekNumber,
@@ -45,7 +56,7 @@ const getWeekDates = (weekNumber, year) => {
 
   // Calculate the start date of the specified week
   const startDate = new Date(firstMonday);
-  startDate.setDate(startDate.getDate() + (weekNumber * 7));
+  startDate.setDate(startDate.getDate() + (weekNumber - 1) * 7);
 
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 6);
@@ -62,6 +73,7 @@ const getWeekDates = (weekNumber, year) => {
     year: year
   };
 };
+
 
 function MainPage({ userId }) {
   const user = auth.currentUser;
@@ -149,9 +161,12 @@ function MainPage({ userId }) {
       let newWeek = prevWeek.index - 1;
       let newYear = prevWeek.year;
 
-      if (newWeek < 0) {
-        newWeek = 51;
+      if (newWeek < 1) {
         newYear -= 1;
+        const totalWeeksLastYear = Math.ceil(
+          (new Date(newYear, 11, 31) - new Date(newYear, 0, 1)) / (1000 * 60 * 60 * 24 * 7)
+        );
+        newWeek = totalWeeksLastYear;
       }
 
       const dates = getWeekDates(newWeek, newYear);
@@ -168,8 +183,12 @@ function MainPage({ userId }) {
       let newWeek = prevWeek.index + 1;
       let newYear = prevWeek.year;
 
-      if (newWeek > 51) {
-        newWeek = 0;
+      const totalWeeksThisYear = Math.ceil(
+        (new Date(newYear, 11, 31) - new Date(newYear, 0, 1)) / (1000 * 60 * 60 * 24 * 7)
+      );
+
+      if (newWeek > totalWeeksThisYear) {
+        newWeek = 1;
         newYear += 1;
       }
 
