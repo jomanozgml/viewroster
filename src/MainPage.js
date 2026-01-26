@@ -155,6 +155,7 @@ function MainPage({ userId }) {
 
       // Calculate periods for each work block
       const dayPeriods = [];
+      let dayTotal = 0;
       Object.entries(workBlocks).forEach(([workId, selectedHours]) => {
         if (selectedHours.length > 0) {
           selectedHours.sort((a, b) => a - b);
@@ -169,9 +170,11 @@ function MainPage({ userId }) {
             workId: Number(workId),
             color: work?.color || '#4CAF50'
           });
-          total += hoursCount;
+          dayTotal += hoursCount;
         }
       });
+
+      total += dayTotal;
 
       if (dayPeriods.length > 0) {
         newPeriods[day] = dayPeriods;
