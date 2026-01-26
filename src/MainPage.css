@@ -156,3 +156,68 @@ a:active, button:active {
 .confirm-dialog button {
   margin: 0 10px;
 }
+
+.work-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.work-selector-label {
+  font-weight: bold;
+  color: #666;
+  margin-right: 10px;
+}
+
+.work-color-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.work-color-box:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.work-color-box.active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px #333;
+  border: 2px solid #fff;
+}
+
+.rename-button {
+  padding: 8px 16px;
+  font-size: 0.9em;
+  margin: 0;
+  height: 50px;
+}
+
+.rename-input {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  font-size: 1em;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.rename-input:focus {
+  outline: none;
+  border-color: #0abad8;
+}
