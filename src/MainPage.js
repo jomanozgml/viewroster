@@ -88,8 +88,10 @@ function MainPage({ userId }) {
   const [hours, setHours] = useState({}); // Now stores { day: { hour: workId } }
   const [periods, setPeriods] = useState({});
   const [totalHours, setTotalHours] = useState(0);
+  const [workTotals, setWorkTotals] = useState({}); // Stores total hours per work: { 1: 8.5, 2: 12, etc. }
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [extraMinutes, setExtraMinutes] = useState({}); // Now stores { day: { '15min': workId, '30min': workId } }
+  const [breaks, setBreaks] = useState({}); // Stores unpaid break: { Mon: { duration: 0.5, workId: 1 }, etc. }
   const [selectedWork, setSelectedWork] = useState(1); // Currently selected work/color
   const [currentWeek, setCurrentWeek] = useState(() => {
     const { week, year } = getCurrentWeekAndYear();
@@ -108,11 +110,47 @@ function MainPage({ userId }) {
       try {
         const userData = await retrieveDataFromFirestore(userId, currentWeek.index, currentWeek.year);
         if (userData) {
-          setHours(userData.hours || {});
-          setExtraMinutes(userData.extraMinutes || {});
+          // Clean up old boolean values and keep only valid work IDs (1-5)
+          const cleanedHours = {};
+          Object.keys(userData.hours || {}).forEach(day => {
+            const dayHours = {};
+            Object.keys(userData.hours[day] || {}).forEach(hour => {
+              const value = userData.hours[day][hour];
+              const workId = Number(value);
+              // Only keep valid work IDs (1-5)
+              if (!isNaN(workId) && workId >= 1 && workId <= 5) {
+                dayHours[hour] = workId;
+              }
+            });
+            if (Object.keys(dayHours).length > 0) {
+              cleanedHours[day] = dayHours;
+            }
+          });
+
+          // Clean up extra minutes
+          const cleanedExtraMinutes = {};
+          Object.keys(userData.extraMinutes || {}).forEach(day => {
+            const dayMinutes = {};
+            Object.keys(userData.extraMinutes[day] || {}).forEach(duration => {
+              const value = userData.extraMinutes[day][duration];
+              const workId = Number(value);
+              // Only keep valid work IDs (1-5)
+              if (!isNaN(workId) && workId >= 1 && workId <= 5) {
+                dayMinutes[duration] = workId;
+              }
+            });
+            if (Object.keys(dayMinutes).length > 0) {
+              cleanedExtraMinutes[day] = dayMinutes;
+            }
+          });
+
+          setHours(cleanedHours);
+          setExtraMinutes(cleanedExtraMinutes);
+          setBreaks(userData.breaks || {});
         } else {
           setHours({});
           setExtraMinutes({});
+          setBreaks({});
         }
       } catch (error) {
         console.error('Error retrieving data from Firestore:', error);
@@ -141,6 +179,7 @@ function MainPage({ userId }) {
   useEffect(() => {
     const newPeriods = {};
     let total = 0;
+    const workHoursTotals = {}; // Track hours per work type
 
     // Calculate hours for each work type per day
     for (const day of days) {
@@ -157,20 +196,28 @@ function MainPage({ userId }) {
       const dayPeriods = [];
       let dayTotal = 0;
       Object.entries(workBlocks).forEach(([workId, selectedHours]) => {
-        if (selectedHours.length > 0) {
+        // Skip invalid workIds (old boolean values)
+        const workIdNum = Number(workId);
+        if (selectedHours.length > 0 && !isNaN(workIdNum) && workIdNum >= 1 && workIdNum <= 5) {
           selectedHours.sort((a, b) => a - b);
           const startHour = Math.min(...selectedHours);
           const endHour = Math.max(...selectedHours) + 1;
           const middleHour = Math.floor((startHour + endHour) / 2);
           const hoursCount = endHour - startHour;
-          const work = defaultWorkColors.find(w => w.id === Number(workId));
+          const work = defaultWorkColors.find(w => w.id === workIdNum);
           dayPeriods.push({
-            period: `${work?.name || `Work ${workId}`}\n${startHour}-${endHour}\n${hoursCount} hr`,
+            period: `${work?.name || `Work ${workIdNum}`}\n${startHour}-${endHour}\n${hoursCount} hr`,
             middleHour,
-            workId: Number(workId),
+            startHour,
+            endHour: endHour - 1,
+            hoursCount,
+            workId: workIdNum,
             color: work?.color || '#4CAF50'
           });
           dayTotal += hoursCount;
+          // Track hours per work
+          if (!workHoursTotals[workIdNum]) workHoursTotals[workIdNum] = 0;
+          workHoursTotals[workIdNum] += hoursCount;
         }
       });
 
@@ -182,14 +229,34 @@ function MainPage({ userId }) {
 
       // Add extra minutes
       if (extraMinutes[day]) {
-        if (extraMinutes[day]['15min']) total += 0.25;
-        if (extraMinutes[day]['30min']) total += 0.5;
+        if (extraMinutes[day]['15min']) {
+          total += 0.25;
+          const workId = extraMinutes[day]['15min'];
+          if (!workHoursTotals[workId]) workHoursTotals[workId] = 0;
+          workHoursTotals[workId] += 0.25;
+        }
+        if (extraMinutes[day]['30min']) {
+          total += 0.5;
+          const workId = extraMinutes[day]['30min'];
+          if (!workHoursTotals[workId]) workHoursTotals[workId] = 0;
+          workHoursTotals[workId] += 0.5;
+        }
+      }
+
+      // Deduct unpaid break time
+      if (breaks[day]) {
+        total -= breaks[day].duration;
+        const workId = breaks[day].workId;
+        if (workHoursTotals[workId]) {
+          workHoursTotals[workId] -= breaks[day].duration;
+        }
       }
     }
 
     setPeriods(newPeriods);
     setTotalHours(total);
-  }, [hours, extraMinutes]);
+    setWorkTotals(workHoursTotals);
+  }, [hours, extraMinutes, breaks]);
 
   const handlePreviousWeek = () => {
     setCurrentWeek(prevWeek => {
@@ -243,7 +310,7 @@ function MainPage({ userId }) {
     trackMouse: true
   });
 
-  const handleInputChange = (day, hour) => {
+  const handleInputChange = async (day, hour) => {
     const currentValue = hours[day]?.[hour];
     let updatedHours;
 
@@ -254,7 +321,12 @@ function MainPage({ userId }) {
       if (updatedHours[day]) {
         const newDayHours = { ...updatedHours[day] };
         delete newDayHours[hour];
-        updatedHours[day] = newDayHours;
+        // If day is now empty, remove the day entirely
+        if (Object.keys(newDayHours).length === 0) {
+          delete updatedHours[day];
+        } else {
+          updatedHours[day] = newDayHours;
+        }
       }
     } else {
       // Set to selected work
@@ -278,18 +350,19 @@ function MainPage({ userId }) {
     }
 
     setHours(updatedHours);
-    saveDataToFirestore(
+    await saveDataToFirestore(
       userId,
       {
         hours: updatedHours,
-        extraMinutes: extraMinutes
+        extraMinutes: extraMinutes,
+        breaks: breaks
       },
       currentWeek.index,
       currentWeek.year
     );
   };
 
-  const handleExtraMinutes = (day, duration) => {
+  const handleExtraMinutes = async (day, duration) => {
     const currentValue = extraMinutes[day]?.[duration];
     let updatedExtraMinutes;
 
@@ -312,11 +385,37 @@ function MainPage({ userId }) {
     }
 
     setExtraMinutes(updatedExtraMinutes);
-    saveDataToFirestore(
+    await saveDataToFirestore(
       userId,
       {
         hours: hours,
-        extraMinutes: updatedExtraMinutes
+        extraMinutes: updatedExtraMinutes,
+        breaks: breaks
+      },
+      currentWeek.index,
+      currentWeek.year
+    );
+  };
+
+  const handleBreakChange = async (day, duration) => {
+    const updatedBreaks = { ...breaks };
+    const currentBreak = breaks[day];
+
+    if (currentBreak?.duration === duration && currentBreak?.workId === selectedWork) {
+      // If clicking the same break with same work, remove it
+      delete updatedBreaks[day];
+    } else {
+      // Set new break duration with selected work
+      updatedBreaks[day] = { duration, workId: selectedWork };
+    }
+
+    setBreaks(updatedBreaks);
+    await saveDataToFirestore(
+      userId,
+      {
+        hours: hours,
+        extraMinutes: extraMinutes,
+        breaks: updatedBreaks
       },
       currentWeek.index,
       currentWeek.year
@@ -330,11 +429,13 @@ function MainPage({ userId }) {
   const confirmClear = () => {
     setHours({});
     setExtraMinutes({});
+    setBreaks({});
     saveDataToFirestore(
       userId,
       {
         hours: {},
-        extraMinutes: {}
+        extraMinutes: {},
+        breaks: {}
       },
       currentWeek.index,
       currentWeek.year
@@ -353,19 +454,24 @@ function MainPage({ userId }) {
   };
 
   const saveDataToFirestore = async (userId, data, weekIndex, year) => {
-    const yearDocRef = doc(db, 'users', userId, 'years', year.toString());
-    const yearDoc = await getDoc(yearDocRef);
+    try {
+      const yearDocRef = doc(db, 'users', userId, 'years', year.toString());
+      const yearDoc = await getDoc(yearDocRef);
 
-    if (!yearDoc.exists()) {
-      await setDoc(yearDocRef, { weeks: {} });
-    }
+      const existingWeeks = yearDoc.exists() ? yearDoc.data()?.weeks || {} : {};
 
-    await setDoc(yearDocRef, {
-      weeks: {
-        ...yearDoc.data()?.weeks,
+      // Replace the entire week data, not merge
+      const updatedWeeks = {
+        ...existingWeeks,
         [weekIndex]: data
-      }
-    }, { merge: true });
+      };
+
+      await setDoc(yearDocRef, { weeks: updatedWeeks });
+
+      console.log('Data saved successfully', data);
+    } catch (error) {
+      console.error('Error saving data to Firestore:', error);
+    }
   };
 
   const retrieveDataFromFirestore = async (userId, weekIndex, year) => {
@@ -414,6 +520,12 @@ function MainPage({ userId }) {
                 const work = workId ? defaultWorkColors.find(w => w.id === workId) : null;
                 const isSelected = !!workId;
 
+                // Find if this hour is part of a period and if it's the middle
+                const periodInfo = periods[day]?.find(p =>
+                  hour >= p.startHour && hour <= p.endHour && p.workId === workId
+                );
+                const isMiddleOfPeriod = periodInfo && hour === periodInfo.middleHour;
+
                 return (
                   <td key={day}>
                     <div
@@ -429,18 +541,11 @@ function MainPage({ userId }) {
                           {hour === 18 && '18:00'}
                         </span>
                       )}
-                      {periods[day] && periods[day].map(periodInfo => (
-                        hour === periodInfo.middleHour && (
-                          <span
-                            key={periodInfo.workId}
-                            className="time-marker"
-                            style={{ color: periodInfo.color }}
-                            dangerouslySetInnerHTML={{
-                              __html: periodInfo.period.replace('\n', '<br />')
-                            }}
-                          />
-                        )
-                      ))}
+                      {isMiddleOfPeriod && (
+                        <span className="diagonal-hours" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                          {periodInfo.hoursCount} hr
+                        </span>
+                      )}
                     </div>
                   </td>
                 );
@@ -476,6 +581,36 @@ function MainPage({ userId }) {
               );
             })}
           </tr>
+          <tr className="break-row">
+            {days.map((day, index) => {
+              const dayBreak = breaks[day];
+              const breakWorkColor = dayBreak?.workId ? defaultWorkColors.find(w => w.id === dayBreak.workId)?.color : null;
+
+              return (
+                <td key={day}>
+                  {index === 0 && (
+                    <div className="break-row-label">Unpaid Break</div>
+                  )}
+                  <div className="break-container">
+                    <div
+                      className={`break-block ${dayBreak?.duration === 0.5 ? 'selected' : ''}`}
+                      style={dayBreak?.duration === 0.5 ? { backgroundColor: breakWorkColor } : {}}
+                      onClick={() => handleBreakChange(day, 0.5)}
+                    >
+                      -30min
+                    </div>
+                    <div
+                      className={`break-block ${dayBreak?.duration === 1 ? 'selected' : ''}`}
+                      style={dayBreak?.duration === 1 ? { backgroundColor: breakWorkColor } : {}}
+                      onClick={() => handleBreakChange(day, 1)}
+                    >
+                      -1hr
+                    </div>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
         </tbody>
       </table>
       <div className="work-selector">
@@ -494,6 +629,19 @@ function MainPage({ userId }) {
       </div>
       <button onClick={handleClearSelection}>Clear Selection</button>
       <button onClick={handleLogout}>Logout</button>
+      <div className="work-totals-bottom">
+        {defaultWorkColors.map(work => {
+          const hours = workTotals[work.id] || 0;
+          if (hours > 0) {
+            return (
+              <span key={work.id} style={{ color: work.color }}>
+                {work.name}: {hours.toFixed(2)} hr
+              </span>
+            );
+          }
+          return null;
+        })}
+      </div>
       {showConfirmDialog && <ConfirmDialog />}
       <footer className="user-info">
         <span>{user?.email}</span>

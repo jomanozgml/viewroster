@@ -69,6 +69,55 @@ th:active {
   font-size: 0.8em;
   color: #aaa;
   height: 3.3vh;
+  background-color: transparent;
+}
+
+.extra-minutes-row {
+  border-bottom: 2px solid #999;
+}
+
+.break-row {
+  background-color: #f0f0f0;
+  position: relative;
+}
+
+.break-row-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5em;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.break-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+.break-block {
+  font-size: 0.8em;
+  color: #999;
+  height: 3.3vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid #ddd;
+  background-color: transparent;
+}
+
+.break-block.selected {
+  color: #fff;
+  font-weight: bold;
 }
 
 .hour-block.selected, .extra-minute-block.selected {
@@ -90,6 +139,23 @@ th:active {
   display: block;
 }
 
+.diagonal-hours {
+  position: absolute;
+  font-size: 2em;
+  font-weight: 900;
+  transform: rotate(-45deg);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+  color: rgba(255, 255, 255, 0.25);
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.3),
+    1px -1px 0 rgba(0, 0, 0, 0.3),
+    -1px 1px 0 rgba(0, 0, 0, 0.3),
+    1px 1px 0 rgba(0, 0, 0, 0.3);
+  mix-blend-mode: overlay;
+}
+
 .watermark {
   position: fixed;
   top: 50%;
@@ -100,6 +166,22 @@ th:active {
   color: rgba(0, 0, 0, 0.2);
   z-index: 1;
   pointer-events: none;
+}
+
+.work-totals-bottom {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.work-totals-bottom span {
+  padding: 5px 10px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 a, button {
