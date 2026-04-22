@@ -62,7 +62,16 @@ th:active {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
   cursor: pointer;
+}
+
+.hour-block {
+  overflow: visible;
+}
+
+.extra-minute-block {
+  overflow: hidden;
 }
 
 .extra-minute-block {
@@ -131,8 +140,35 @@ th:active {
 
 .time-marker{
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: #aaa;
   font-size: 0.8em;
+  z-index: 4;
+}
+
+.boundary-time-marker {
+  font-weight: 400;
+  color: #f2f2f2 !important;
+  text-shadow: none;
+  z-index: 5;
+}
+
+.half-start-marker {
+  top: 25%;
+  color: #aaa !important;
+}
+
+.end-boundary-marker {
+  top: calc(100% + 50%);
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  color: #aaa !important;
+}
+
+.half-end-marker {
+  top: 75%;
 }
 
 .hour-block.selected .time-marker {
@@ -146,7 +182,7 @@ th:active {
   transform: rotate(-45deg);
   pointer-events: none;
   white-space: nowrap;
-  z-index: 5;
+  z-index: 6;
   color: rgba(255, 255, 255, 0.25);
   text-shadow:
     -1px -1px 0 rgba(0, 0, 0, 0.3),

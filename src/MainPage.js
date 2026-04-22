@@ -82,6 +82,13 @@ const getWeekDates = (weekNumber, year) => {
   };
 };
 
+const formatHourLabel = hourNum => {
+  const isHalf = hourNum % 1 !== 0;
+  const h = Math.floor(hourNum);
+  const m = isHalf ? '30' : '00';
+  return `${String(h).padStart(2, '0')}:${m}`;
+};
+
 
 function MainPage({ userId }) {
   const user = auth.currentUser;
@@ -116,10 +123,15 @@ function MainPage({ userId }) {
             const dayHours = {};
             Object.keys(userData.hours[day] || {}).forEach(hour => {
               const value = userData.hours[day][hour];
-              const workId = Number(value);
+              let workId;
+              if (typeof value === 'string' && value.includes('-')) {
+                workId = Number(value.split('-')[0]);
+              } else {
+                workId = Number(value);
+              }
               // Only keep valid work IDs (1-5)
               if (!isNaN(workId) && workId >= 1 && workId <= 5) {
-                dayHours[hour] = workId;
+                dayHours[hour] = value;
               }
             });
             if (Object.keys(dayHours).length > 0) {
@@ -187,29 +199,46 @@ function MainPage({ userId }) {
       const workBlocks = {}; // Group hours by work type
 
       Object.keys(dayHours).forEach(hour => {
-        const workId = dayHours[hour];
+        const rawVal = dayHours[hour];
+        let workId, modifier;
+        if (typeof rawVal === 'string' && rawVal.includes('-')) {
+            const parts = rawVal.split('-');
+            workId = Number(parts[0]);
+            modifier = parts[1];
+        } else {
+            workId = Number(rawVal);
+            modifier = null;
+        }
         if (!workBlocks[workId]) workBlocks[workId] = [];
-        workBlocks[workId].push(Number(hour));
+        workBlocks[workId].push({ hour: Number(hour), modifier });
       });
 
       // Calculate periods for each work block
       const dayPeriods = [];
       let dayTotal = 0;
-      Object.entries(workBlocks).forEach(([workId, selectedHours]) => {
+      Object.entries(workBlocks).forEach(([workIdStr, selectedHourObjs]) => {
         // Skip invalid workIds (old boolean values)
-        const workIdNum = Number(workId);
-        if (selectedHours.length > 0 && !isNaN(workIdNum) && workIdNum >= 1 && workIdNum <= 5) {
-          selectedHours.sort((a, b) => a - b);
-          const startHour = Math.min(...selectedHours);
-          const endHour = Math.max(...selectedHours) + 1;
-          const middleHour = Math.floor((startHour + endHour) / 2);
-          const hoursCount = endHour - startHour;
+        const workIdNum = Number(workIdStr);
+        if (selectedHourObjs.length > 0 && !isNaN(workIdNum) && workIdNum >= 1 && workIdNum <= 5) {
+          selectedHourObjs.sort((a, b) => a.hour - b.hour);
+          const startObj = selectedHourObjs[0];
+          const endObj = selectedHourObjs[selectedHourObjs.length - 1];
+          const rawStart = startObj.hour;
+          const rawEnd = endObj.hour + 1;
+
+          const startHourObjVal = startObj.modifier === 'startHalf' ? rawStart + 0.5 : rawStart;
+          const endHourObjVal = endObj.modifier === 'endHalf' ? rawEnd - 0.5 : rawEnd;
+
+          const middleHour = Math.floor((rawStart + rawEnd - 1) / 2);
+          const hoursCount = endHourObjVal - startHourObjVal;
           const work = defaultWorkColors.find(w => w.id === workIdNum);
           dayPeriods.push({
-            period: `${work?.name || `Work ${workIdNum}`}\n${startHour}-${endHour}\n${hoursCount} hr`,
+            period: `${work?.name || `Work ${workIdNum}`}\n${startHourObjVal}-${endHourObjVal}\n${hoursCount} hr`,
             middleHour,
-            startHour,
-            endHour: endHour - 1,
+            startCell: rawStart,
+            endCell: rawEnd - 1,
+            startLabelHour: startHourObjVal,
+            endLabelHour: endHourObjVal,
             hoursCount,
             workId: workIdNum,
             color: work?.color || '#4CAF50'
@@ -311,17 +340,70 @@ function MainPage({ userId }) {
   });
 
   const handleInputChange = async (day, hour) => {
-    const currentValue = hours[day]?.[hour];
-    let updatedHours;
+    const rawValue = hours[day]?.[hour];
+    let currentValue = rawValue;
+    let modifier = null;
+    if (typeof rawValue === 'string' && rawValue.includes('-')) {
+      const parts = rawValue.split('-');
+      currentValue = Number(parts[0]);
+      modifier = parts[1];
+    } else {
+      currentValue = Number(rawValue);
+    }
 
-    // Toggle: if already selected with same work, remove it; otherwise set to selected work
-    if (currentValue === selectedWork) {
-      // Remove this hour
-      updatedHours = { ...hours };
+    let updatedHours = { ...hours };
+    const isSelectedWork = currentValue === selectedWork;
+
+    // Toggle: if already selected with same work, toggle to half or remove it; otherwise set to selected work
+    if (isSelectedWork) {
+      // Determine block position
+      const prevVal = hours[day]?.[hour - 1];
+      const hasPrev = prevVal && (prevVal === selectedWork || String(prevVal).startsWith(`${selectedWork}-`));
+
+      const nextVal = hours[day]?.[hour + 1];
+      const hasNext = nextVal && (nextVal === selectedWork || String(nextVal).startsWith(`${selectedWork}-`));
+
+      const isIsolated = !hasPrev && !hasNext;
+      const isStart = !hasPrev && hasNext;
+      const isEnd = hasPrev && !hasNext;
+
+      let nextModifier = null;
+      let shouldDelete = false;
+      let shouldDeleteBelow = false;
+
+      if (isIsolated) {
+        if (!modifier) nextModifier = 'startHalf';
+        else if (modifier === 'startHalf') nextModifier = 'endHalf';
+        else shouldDelete = true;
+      } else if (isStart) {
+        if (!modifier) nextModifier = 'startHalf';
+        else shouldDelete = true;
+      } else if (isEnd) {
+        if (!modifier) nextModifier = 'endHalf';
+        else shouldDelete = true;
+      } else {
+        shouldDelete = true;
+        shouldDeleteBelow = true;
+      }
+
       if (updatedHours[day]) {
         const newDayHours = { ...updatedHours[day] };
-        delete newDayHours[hour];
-        // If day is now empty, remove the day entirely
+        if (shouldDelete) {
+          delete newDayHours[hour];
+          if (shouldDeleteBelow) {
+            let nextHour = hour + 1;
+            while (
+              newDayHours[nextHour] &&
+              (newDayHours[nextHour] === selectedWork || String(newDayHours[nextHour]).startsWith(`${selectedWork}-`))
+            ) {
+              delete newDayHours[nextHour];
+              nextHour++;
+            }
+          }
+        } else {
+          newDayHours[hour] = nextModifier ? `${selectedWork}-${nextModifier}` : selectedWork;
+        }
+
         if (Object.keys(newDayHours).length === 0) {
           delete updatedHours[day];
         } else {
@@ -334,15 +416,20 @@ function MainPage({ userId }) {
 
       // Auto-fill intermediate hours for the same work type
       const sameWorkHours = Object.keys(updatedHours[day])
-        .filter(h => updatedHours[day][h] === selectedWork)
+        .filter(h => {
+           const v = updatedHours[day][h];
+           return v === selectedWork || String(v).startsWith(`${selectedWork}-`);
+        })
         .map(Number);
 
       if (sameWorkHours.length > 1) {
         const startHour = Math.min(...sameWorkHours);
         const endHour = Math.max(...sameWorkHours);
         for (let i = startHour + 1; i < endHour; i++) {
+          const cellVal = updatedHours[day][i];
+          const isSameWork = cellVal === selectedWork || String(cellVal).startsWith(`${selectedWork}-`);
           // Only fill if empty or same work type
-          if (!updatedHours[day][i] || updatedHours[day][i] === selectedWork) {
+          if (!cellVal || isSameWork) {
             updatedHours[day][i] = selectedWork;
           }
         }
@@ -516,25 +603,99 @@ function MainPage({ userId }) {
           {Array.from({ length: 24 }, (_, i) => i).map(hour => (
             <tr key={hour}>
               {days.map(day => {
-                const workId = hours[day]?.[hour];
+                const rawVal = hours[day]?.[hour];
+                let workId;
+                let modifier = null;
+                if (typeof rawVal === 'string' && rawVal.includes('-')) {
+                  const parts = rawVal.split('-');
+                  workId = Number(parts[0]);
+                  modifier = parts[1];
+                } else {
+                  workId = Number(rawVal);
+                }
                 const work = workId ? defaultWorkColors.find(w => w.id === workId) : null;
                 const isSelected = !!workId;
 
+                let backgroundStyle = {};
+                if (isSelected && work) {
+                  if (modifier === 'startHalf') {
+                    backgroundStyle = { background: `linear-gradient(to bottom, transparent 50%, ${work.color} 50%)` };
+                  } else if (modifier === 'endHalf') {
+                    backgroundStyle = { background: `linear-gradient(to bottom, ${work.color} 50%, transparent 50%)` };
+                  } else {
+                    backgroundStyle = { backgroundColor: work.color };
+                  }
+                }
+
                 // Find if this hour is part of a period and if it's the middle
                 const periodInfo = periods[day]?.find(p =>
-                  hour >= p.startHour && hour <= p.endHour && p.workId === workId
+                  hour >= p.startCell && hour <= p.endCell && p.workId === workId
                 );
                 const isMiddleOfPeriod = periodInfo && hour === periodInfo.middleHour;
+                const isPeriodStart = periodInfo && hour === periodInfo.startCell;
+                const isPeriodEnd = periodInfo && hour === periodInfo.endCell;
+                const endDisplayHour = isPeriodEnd ? periodInfo.endLabelHour : null;
+                const endDisplayHourNormalized = endDisplayHour === null ? null : endDisplayHour % 24;
+                const isMarkerHour = hourValue => hourValue === 0 || hourValue === 6 || hourValue === 12 || hourValue === 18;
+                const shouldHideEndBoundary =
+                  endDisplayHour === 24 ||
+                  (endDisplayHourNormalized !== null && isMarkerHour(endDisplayHourNormalized));
+                const showEndBoundary = isPeriodEnd && !shouldHideEndBoundary;
+
+                // Check if the previous hour was a period end, because its label will be drawn in THIS cell
+                let prevShowEndBoundary = false;
+                if (hour > 0) {
+                  const prevRawVal = hours[day]?.[hour - 1];
+                  let prevWorkId;
+                  if (typeof prevRawVal === 'string' && prevRawVal.includes('-')) {
+                    prevWorkId = Number(prevRawVal.split('-')[0]);
+                  } else {
+                    prevWorkId = Number(prevRawVal);
+                  }
+                  if (prevWorkId) {
+                    const prevPeriodInfo = periods[day]?.find(p =>
+                      (hour - 1) >= p.startCell && (hour - 1) <= p.endCell && p.workId === prevWorkId
+                    );
+                    if (prevPeriodInfo && (hour - 1) === prevPeriodInfo.endCell) {
+                      const prevEndDisplayHour = prevPeriodInfo.endLabelHour;
+                      const prevEndDisplayHourNorm = prevEndDisplayHour % 24;
+                      const prevShouldHide = prevEndDisplayHour === 24 || isMarkerHour(prevEndDisplayHourNorm);
+                      if (!prevShouldHide) {
+                        prevShowEndBoundary = true;
+                      }
+                    }
+                  }
+                }
+
+                const showRegularMarker =
+                  isMarkerHour(hour) &&
+                  !isPeriodStart &&
+                  !isPeriodEnd &&
+                  !isSelected &&
+                  !prevShowEndBoundary;
+
+                const startBoundaryLabel = isPeriodStart ? formatHourLabel(periodInfo.startLabelHour) : '';
+                const endBoundaryLabel = showEndBoundary ? formatHourLabel(endDisplayHourNormalized) : '';
 
                 return (
                   <td key={day}>
                     <div
                       className={`hour-block ${isSelected ? 'selected' : ''}`}
-                      style={isSelected ? { backgroundColor: work?.color } : {}}
+                      style={backgroundStyle}
                       onClick={() => handleInputChange(day, hour)}
                     >
-                      {(hour === 0 || hour === 6 || hour === 12 || hour === 18) && (
-                        <span className="time-marker" style={isSelected ? { color: '#666' } : {}}>
+                      {isPeriodStart && (
+                        <span className={`time-marker boundary-time-marker ${modifier === 'startHalf' ? 'half-start-marker' : ''}`}>
+                          {startBoundaryLabel}
+                        </span>
+                      )}
+                      {showEndBoundary && (
+                        <span className={`time-marker boundary-time-marker end-boundary-marker ${modifier === 'endHalf' ? 'half-end-marker' : ''}`}>
+                          {endBoundaryLabel}
+                        </span>
+                      )}
+                      {showRegularMarker && (
+                        <span className="time-marker">
                           {hour === 0 && '00:00'}
                           {hour === 6 && '06:00'}
                           {hour === 12 && '12:00'}
