@@ -93,6 +93,8 @@ const formatHourLabel = hourNum => {
 function MainPage({ userId }) {
   const user = auth.currentUser;
   const [hours, setHours] = useState({}); // Now stores { day: { hour: workId } }
+  const [remarks, setRemarks] = useState({}); // { day: { hour: "remark text" } }
+  const [remarkModal, setRemarkModal] = useState({ isOpen: false, day: null, hour: null, text: '' });
   const [periods, setPeriods] = useState({});
   const [totalHours, setTotalHours] = useState(0);
   const [workTotals, setWorkTotals] = useState({}); // Stores total hours per work: { 1: 8.5, 2: 12, etc. }
@@ -100,6 +102,9 @@ function MainPage({ userId }) {
   const [extraMinutes, setExtraMinutes] = useState({}); // Now stores { day: { '15min': workId, '30min': workId } }
   const [breaks, setBreaks] = useState({}); // Stores unpaid break: { Mon: { duration: 0.5, workId: 1 }, etc. }
   const [selectedWork, setSelectedWork] = useState(1); // Currently selected work/color
+  const [slideDirection, setSlideDirection] = useState(''); // 'slide-left', 'slide-right', or ''
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const [currentWeek, setCurrentWeek] = useState(() => {
     const { week, year } = getCurrentWeekAndYear();
     const dates = getWeekDates(week, year);
@@ -159,10 +164,12 @@ function MainPage({ userId }) {
           setHours(cleanedHours);
           setExtraMinutes(cleanedExtraMinutes);
           setBreaks(userData.breaks || {});
+          setRemarks(userData.remarks || {});
         } else {
           setHours({});
           setExtraMinutes({});
           setBreaks({});
+          setRemarks({});
         }
       } catch (error) {
         console.error('Error retrieving data from Firestore:', error);
@@ -287,6 +294,13 @@ function MainPage({ userId }) {
     setWorkTotals(workHoursTotals);
   }, [hours, extraMinutes, breaks]);
 
+  const triggerSlide = (direction) => {
+    setSlideDirection(`slide-${direction}`);
+    setTimeout(() => {
+      setSlideDirection('');
+    }, 300); // 300ms matches CSS transition
+  };
+
   const handlePreviousWeek = () => {
     setCurrentWeek(prevWeek => {
       let newWeek = prevWeek.index - 1;
@@ -307,6 +321,7 @@ function MainPage({ userId }) {
         ...dates
       };
     });
+    triggerSlide('right');
   };
 
   const handleNextWeek = () => {
@@ -330,16 +345,48 @@ function MainPage({ userId }) {
         ...dates
       };
     });
+    triggerSlide('left');
   };
 
   const swipeHandlers = useSwipeable({
     onSwipedLeft: handleNextWeek,
     onSwipedRight: handlePreviousWeek,
     preventDefaultTouchmoveEvent: true,
-    trackMouse: true
+    trackMouse: true,
+    delta: 100 // Require a longer swipe distance (100px) so it's less sensitive
   });
 
+  useEffect(() => {
+    let timer;
+    if (toastMessage) {
+      timer = setTimeout(() => setToastMessage(''), 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+  };
+
   const handleInputChange = async (day, hour) => {
+    if (!isEditMode) {
+      if (remarks[day]?.[hour]) {
+        showToast(`${day} ${formatHourLabel(hour)}: ${remarks[day][hour]}`);
+      } else {
+        showToast("Please turn on Edit Mode using the toggle at the bottom to make changes.");
+      }
+      return;
+    }
+
+    if (selectedWork === 'remark') {
+      if (hours[day]?.[hour]) {
+        setRemarkModal({ isOpen: true, day, hour, text: remarks[day]?.[hour] || '' });
+      } else {
+        showToast("Remarks can only be added to selected work blocks.");
+      }
+      return;
+    }
+
     const rawValue = hours[day]?.[hour];
     let currentValue = rawValue;
     let modifier = null;
@@ -373,7 +420,6 @@ function MainPage({ userId }) {
 
       if (isIsolated) {
         if (!modifier) nextModifier = 'startHalf';
-        else if (modifier === 'startHalf') nextModifier = 'endHalf';
         else shouldDelete = true;
       } else if (isStart) {
         if (!modifier) nextModifier = 'startHalf';
@@ -442,7 +488,8 @@ function MainPage({ userId }) {
       {
         hours: updatedHours,
         extraMinutes: extraMinutes,
-        breaks: breaks
+        breaks: breaks,
+        remarks: remarks
       },
       currentWeek.index,
       currentWeek.year
@@ -450,6 +497,12 @@ function MainPage({ userId }) {
   };
 
   const handleExtraMinutes = async (day, duration) => {
+    if (!isEditMode) {
+      showToast("Please turn on Edit Mode using the toggle at the bottom to make changes.");
+      return;
+    }
+    if (selectedWork === 'remark') return;
+
     const currentValue = extraMinutes[day]?.[duration];
     let updatedExtraMinutes;
 
@@ -477,7 +530,8 @@ function MainPage({ userId }) {
       {
         hours: hours,
         extraMinutes: updatedExtraMinutes,
-        breaks: breaks
+        breaks: breaks,
+        remarks: remarks
       },
       currentWeek.index,
       currentWeek.year
@@ -485,6 +539,12 @@ function MainPage({ userId }) {
   };
 
   const handleBreakChange = async (day, duration) => {
+    if (!isEditMode) {
+      showToast("Please turn on Edit Mode using the toggle at the bottom to make changes.");
+      return;
+    }
+    if (selectedWork === 'remark') return;
+
     const updatedBreaks = { ...breaks };
     const currentBreak = breaks[day];
 
@@ -502,7 +562,8 @@ function MainPage({ userId }) {
       {
         hours: hours,
         extraMinutes: extraMinutes,
-        breaks: updatedBreaks
+        breaks: updatedBreaks,
+        remarks: remarks
       },
       currentWeek.index,
       currentWeek.year
@@ -522,7 +583,8 @@ function MainPage({ userId }) {
       {
         hours: {},
         extraMinutes: {},
-        breaks: {}
+        breaks: {},
+        remarks: remarks
       },
       currentWeek.index,
       currentWeek.year
@@ -539,6 +601,19 @@ function MainPage({ userId }) {
       console.error('Error logging out:', error);
     }
   };
+
+  const isCurrentWeek = () => {
+    const { week, year } = getCurrentWeekAndYear();
+    return currentWeek.index === week && currentWeek.year === year;
+  };
+
+  const getTodayDayName = () => {
+    if (!isCurrentWeek()) return null;
+    const dayIndex = (new Date().getDay() + 6) % 7;
+    return days[dayIndex];
+  };
+
+  const todayHeader = getTodayDayName();
 
   const saveDataToFirestore = async (userId, data, weekIndex, year) => {
     try {
@@ -571,6 +646,46 @@ function MainPage({ userId }) {
     return {};
   };
 
+  const saveRemark = async () => {
+    const updatedRemarks = {
+      ...remarks,
+      [remarkModal.day]: {
+        ...(remarks[remarkModal.day] || {}),
+        [remarkModal.hour]: remarkModal.text
+      }
+    };
+    if (!remarkModal.text.trim()) {
+       delete updatedRemarks[remarkModal.day][remarkModal.hour];
+    }
+    setRemarks(updatedRemarks);
+    setRemarkModal({ isOpen: false, day: null, hour: null, text: '' });
+    await saveDataToFirestore(
+      userId,
+      { hours, extraMinutes, breaks, remarks: updatedRemarks },
+      currentWeek.index,
+      currentWeek.year
+    );
+  };
+
+  const RemarkDialog = () => (
+    <div className="confirm-dialog-overlay">
+      <div className="confirm-dialog">
+        <p>Remark for {remarkModal.day} {formatHourLabel(remarkModal.hour)}</p>
+        <textarea
+          className="rename-input"
+          rows="3"
+          value={remarkModal.text}
+          onChange={(e) => setRemarkModal({ ...remarkModal, text: e.target.value })}
+          placeholder="e.g. Support Work at City Hall"
+        />
+        <div className="confirm-dialog-buttons">
+          <button onClick={saveRemark}>Save</button>
+          <button onClick={() => setRemarkModal({ isOpen: false, day: null, hour: null, text: '' })}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
   const ConfirmDialog = () => (
     <div className="confirm-dialog-overlay">
       <div className="confirm-dialog">
@@ -584,8 +699,9 @@ function MainPage({ userId }) {
   );
 
   return (
-    <div className="main-div" {...swipeHandlers}>
+    <div className={`main-div ${slideDirection} ${isEditMode ? 'edit-mode' : 'view-mode'}`} {...swipeHandlers}>
       <div className="watermark">Total: {totalHours.toFixed(2)} hr</div>
+
       <table>
         <thead>
           <tr id='weekRowHeader'>
@@ -596,7 +712,14 @@ function MainPage({ userId }) {
             <th className="arrow-btn" onClick={handleNextWeek}>{'>'}</th>
           </tr>
           <tr>
-            {days.map(day => <th key={day}>{day}</th>)}
+            {days.map(day => (
+              <th
+                key={day}
+                className={day === todayHeader ? 'current-day-label' : ''}
+              >
+                {day}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -707,6 +830,9 @@ function MainPage({ userId }) {
                           {periodInfo.hoursCount} hr
                         </span>
                       )}
+                      {remarks[day]?.[hour] && (
+                        <span className="remark-indicator">💬</span>
+                      )}
                     </div>
                   </td>
                 );
@@ -749,9 +875,7 @@ function MainPage({ userId }) {
 
               return (
                 <td key={day}>
-                  {index === 0 && (
-                    <div className="break-row-label">Unpaid Break</div>
-                  )}
+
                   <div className="break-container">
                     <div
                       className={`break-block ${dayBreak?.duration === 0.5 ? 'selected' : ''}`}
@@ -774,7 +898,7 @@ function MainPage({ userId }) {
           </tr>
         </tbody>
       </table>
-      <div className="work-selector">
+      <div className={`work-selector ${isEditMode ? '' : 'hidden'}`}>
         <span className="work-selector-label">Select Work:</span>
         {defaultWorkColors.map(work => (
           <div
@@ -787,9 +911,34 @@ function MainPage({ userId }) {
             {work.id}
           </div>
         ))}
+        <div
+          className={`work-color-box ${selectedWork === 'remark' ? 'active' : ''}`}
+          style={{ backgroundColor: '#666', fontSize: '1.5em' }}
+          onClick={() => setSelectedWork('remark')}
+          title="Add/Edit Remark"
+        >
+          📝
+        </div>
       </div>
-      <button onClick={handleClearSelection}>Clear Selection</button>
-      <button onClick={handleLogout}>Logout</button>
+      <div className="bottom-controls">
+        <div className="mode-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={isEditMode}
+              onChange={(e) => setIsEditMode(e.target.checked)}
+            />
+            <span className="slider"></span>
+            Edit Mode
+          </label>
+        </div>
+
+        <div className={`action-buttons ${isEditMode ? '' : 'hidden'}`}>
+          <button className="clear-btn" onClick={handleClearSelection}>Clear Week</button>
+        </div>
+
+        <button onClick={handleLogout} className="logout-btn">Logout</button>
+      </div>
       <div className="work-totals-bottom">
         {defaultWorkColors.map(work => {
           const hours = workTotals[work.id] || 0;
@@ -804,6 +953,14 @@ function MainPage({ userId }) {
         })}
       </div>
       {showConfirmDialog && <ConfirmDialog />}
+      {remarkModal.isOpen && <RemarkDialog />}
+      {toastMessage && (
+        <div className="toast-overlay" onClick={() => setToastMessage('')}>
+          <div className="toast-message" onClick={(e) => e.stopPropagation()}>
+            {toastMessage}
+          </div>
+        </div>
+      )}
       <footer className="user-info">
         <span>{user?.email}</span>
       </footer>

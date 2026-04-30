@@ -5,6 +5,17 @@
 .main-div {
   font-family: sans-serif;
   text-align: center;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.main-div.slide-left {
+  transform: translateX(-20px);
+  opacity: 0.5;
+}
+
+.main-div.slide-right {
+  transform: translateX(20px);
+  opacity: 0.5;
 }
 
 table {
@@ -50,6 +61,11 @@ th, td {
   border-left: 1px solid #eee;
 }
 
+.current-day-label {
+  background-color: #ff9800 !important;
+  color: white;
+  font-weight: bold;
+}
 
 th:active {
   background-color: #0abad8;
@@ -156,8 +172,8 @@ th:active {
 }
 
 .half-start-marker {
-  top: 25%;
-  color: #aaa !important;
+  top: 75%;
+  color: #f2f2f2 !important;
 }
 
 .end-boundary-marker {
@@ -177,7 +193,7 @@ th:active {
 
 .diagonal-hours {
   position: absolute;
-  font-size: 2em;
+  font-size: 1.2em;
   font-weight: 900;
   transform: rotate(-45deg);
   pointer-events: none;
@@ -244,6 +260,17 @@ a:active, button:active {
   font-size: 0.8em;
 }
 
+.remark-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.8em;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
 .confirm-dialog-overlay {
   position: fixed;
   top: 0;
@@ -284,6 +311,116 @@ a:active, button:active {
   padding: 15px;
   background-color: #f5f5f5;
   border-radius: 8px;
+}
+
+.main-div.edit-mode table {
+  box-shadow: 0 0 15px rgba(0, 186, 216, 0.4);
+  border: 2px solid #0abad8;
+}
+
+.main-div.view-mode .hour-block.selected {
+  opacity: 0.85;
+}
+
+.main-div.edit-mode .hour-block {
+  border: 1px dotted rgba(0, 0, 0, 0.1);
+}
+
+.bottom-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+  gap: 15px;
+}
+
+.bottom-controls .mode-toggle {
+  margin: 0;
+}
+
+.bottom-controls .action-buttons {
+  margin: 10px 0 0 0;
+}
+
+.bottom-controls .logout-btn {
+  margin: 0;
+}
+
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.toast-message {
+  background-color: #333;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  margin-bottom: 50px;
+  font-size: 1rem;
+  max-width: 80%;
+  text-align: center;
+  animation: slideUpToast 0.3s ease-out forwards;
+}
+
+@keyframes slideUpToast {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.work-selector.hidden,
+.action-buttons.hidden {
+  display: none !important;
+}
+
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+}
+
+.mode-toggle label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  background-color: #f1f1f1;
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.main-div.edit-mode .mode-toggle label {
+  border: 1px solid #ddd;
+}
+
+.mode-toggle input {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.logout-btn {
+  margin-top: 10px;
 }
 
 .work-selector-label {
