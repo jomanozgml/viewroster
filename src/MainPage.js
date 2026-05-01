@@ -105,6 +105,7 @@ function MainPage({ userId }) {
   const [slideDirection, setSlideDirection] = useState(''); // 'slide-left', 'slide-right', or ''
   const [isEditMode, setIsEditMode] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [activeRemarkBubble, setActiveRemarkBubble] = useState(null);
   const [currentWeek, setCurrentWeek] = useState(() => {
     const { week, year } = getCurrentWeekAndYear();
     const dates = getWeekDates(week, year);
@@ -364,6 +365,14 @@ function MainPage({ userId }) {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
+  useEffect(() => {
+    let timer;
+    if (activeRemarkBubble) {
+      timer = setTimeout(() => setActiveRemarkBubble(null), 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [activeRemarkBubble]);
+
   const showToast = (msg) => {
     setToastMessage(msg);
   };
@@ -371,7 +380,7 @@ function MainPage({ userId }) {
   const handleInputChange = async (day, hour) => {
     if (!isEditMode) {
       if (remarks[day]?.[hour]) {
-        showToast(`${day} ${formatHourLabel(hour)}: ${remarks[day][hour]}`);
+        setActiveRemarkBubble({ day, hour, text: remarks[day][hour] });
       } else {
         showToast("Please turn on Edit Mode using the toggle at the bottom to make changes.");
       }
@@ -667,36 +676,7 @@ function MainPage({ userId }) {
     );
   };
 
-  const RemarkDialog = () => (
-    <div className="confirm-dialog-overlay">
-      <div className="confirm-dialog">
-        <p>Remark for {remarkModal.day} {formatHourLabel(remarkModal.hour)}</p>
-        <textarea
-          className="rename-input"
-          rows="3"
-          value={remarkModal.text}
-          onChange={(e) => setRemarkModal({ ...remarkModal, text: e.target.value })}
-          placeholder="e.g. Support Work at City Hall"
-        />
-        <div className="confirm-dialog-buttons">
-          <button onClick={saveRemark}>Save</button>
-          <button onClick={() => setRemarkModal({ isOpen: false, day: null, hour: null, text: '' })}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
 
-  const ConfirmDialog = () => (
-    <div className="confirm-dialog-overlay">
-      <div className="confirm-dialog">
-        <p>This will clear all selections for this week!</p>
-        <div className="confirm-dialog-buttons">
-          <button onClick={confirmClear}>Confirm</button>
-          <button onClick={() => setShowConfirmDialog(false)}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className={`main-div ${slideDirection} ${isEditMode ? 'edit-mode' : 'view-mode'}`} {...swipeHandlers}>
@@ -800,11 +780,13 @@ function MainPage({ userId }) {
                 const startBoundaryLabel = isPeriodStart ? formatHourLabel(periodInfo.startLabelHour) : '';
                 const endBoundaryLabel = showEndBoundary ? formatHourLabel(endDisplayHourNormalized) : '';
 
+                const isActiveBubble = activeRemarkBubble?.day === day && activeRemarkBubble?.hour === hour;
+
                 return (
                   <td key={day}>
                     <div
                       className={`hour-block ${isSelected ? 'selected' : ''}`}
-                      style={backgroundStyle}
+                      style={{ ...backgroundStyle, zIndex: isActiveBubble ? 1000 : 'auto' }}
                       onClick={() => handleInputChange(day, hour)}
                     >
                       {isPeriodStart && (
@@ -831,7 +813,25 @@ function MainPage({ userId }) {
                         </span>
                       )}
                       {remarks[day]?.[hour] && (
-                        <span className="remark-indicator">💬</span>
+                        <span
+                          className="remark-indicator"
+                          onClick={(e) => {
+                            if (isEditMode && selectedWork !== 'remark') {
+                              // If they click the indicator while in edit mode but not remark mode, show bubble
+                              e.stopPropagation();
+                              setActiveRemarkBubble({ day, hour, text: remarks[day][hour] });
+                            }
+                          }}
+                        >
+                          💬
+                        </span>
+                      )}
+
+                      {activeRemarkBubble?.day === day && activeRemarkBubble?.hour === hour && (
+                        <div className="remark-bubble" onClick={(e) => e.stopPropagation()}>
+                          <div className="remark-bubble-text">{activeRemarkBubble.text}</div>
+                          <button className="remark-bubble-close" onClick={() => setActiveRemarkBubble(null)}>✕</button>
+                        </div>
                       )}
                     </div>
                   </td>
@@ -912,7 +912,7 @@ function MainPage({ userId }) {
           </div>
         ))}
         <div
-          className={`work-color-box ${selectedWork === 'remark' ? 'active' : ''}`}
+          className={`work-color-box remark-selector-btn ${selectedWork === 'remark' ? 'active' : ''}`}
           style={{ backgroundColor: '#666', fontSize: '1.5em' }}
           onClick={() => setSelectedWork('remark')}
           title="Add/Edit Remark"
@@ -952,8 +952,36 @@ function MainPage({ userId }) {
           return null;
         })}
       </div>
-      {showConfirmDialog && <ConfirmDialog />}
-      {remarkModal.isOpen && <RemarkDialog />}
+      {showConfirmDialog && (
+        <div className="confirm-dialog-overlay">
+          <div className="confirm-dialog">
+            <p>This will clear all selections for this week!</p>
+            <div className="confirm-dialog-buttons">
+              <button onClick={confirmClear}>Confirm</button>
+              <button onClick={() => setShowConfirmDialog(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {remarkModal.isOpen && (
+        <div className="confirm-dialog-overlay">
+          <div className="confirm-dialog">
+            <p>Remark for {remarkModal.day} {formatHourLabel(remarkModal.hour)}</p>
+            <textarea
+              className="rename-input"
+              rows="3"
+              value={remarkModal.text}
+              onChange={(e) => setRemarkModal({ ...remarkModal, text: e.target.value })}
+              placeholder="e.g. Support Work at City Hall"
+              autoFocus
+            />
+            <div className="confirm-dialog-buttons">
+              <button onClick={saveRemark}>Save</button>
+              <button onClick={() => setRemarkModal({ isOpen: false, day: null, hour: null, text: '' })}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
       {toastMessage && (
         <div className="toast-overlay" onClick={() => setToastMessage('')}>
           <div className="toast-message" onClick={(e) => e.stopPropagation()}>

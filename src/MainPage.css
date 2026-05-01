@@ -264,9 +264,9 @@ a:active, button:active {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 0.8em;
+  font-size: 1.5em;
   line-height: 1;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 10;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
@@ -475,4 +475,56 @@ a:active, button:active {
 .rename-input:focus {
   outline: none;
   border-color: #0abad8;
+}.remark-bubble {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%) translateX(10px);
+  background-color: white;
+  border: 2px solid #0abad8;
+  border-radius: 40px;
+  padding: 8px 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  animation: popIn 0.2s ease-out forwards;
+}
+
+.remark-bubble-text {
+  font-size: 14px;
+  color: #333;
+}
+
+.remark-bubble-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.remark-bubble-close:hover {
+  color: #333;
+  background: #eee;
+  box-shadow: none;
+  transform: none;
+}
+
+@keyframes popIn {
+  from { transform: translateY(-50%) translateX(0) scale(0.8); opacity: 0; }
+  to { transform: translateY(-50%) translateX(10px) scale(1); opacity: 1; }
+}
+
+.work-color-box.remark-selector-btn {
+  width: 80px;
+  border-radius: 12px;
 }
