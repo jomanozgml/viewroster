@@ -655,17 +655,39 @@ function MainPage({ userId }) {
     return {};
   };
 
-  const saveRemark = async () => {
-    const updatedRemarks = {
-      ...remarks,
-      [remarkModal.day]: {
-        ...(remarks[remarkModal.day] || {}),
-        [remarkModal.hour]: remarkModal.text
+  const updateRemarkEntry = (sourceRemarks, day, hour, text) => {
+    const updatedRemarks = { ...sourceRemarks };
+    const dayRemarks = { ...(updatedRemarks[day] || {}) };
+
+    if (text.trim()) {
+      dayRemarks[hour] = text;
+      updatedRemarks[day] = dayRemarks;
+    } else {
+      delete dayRemarks[hour];
+      if (Object.keys(dayRemarks).length === 0) {
+        delete updatedRemarks[day];
+      } else {
+        updatedRemarks[day] = dayRemarks;
       }
-    };
-    if (!remarkModal.text.trim()) {
-       delete updatedRemarks[remarkModal.day][remarkModal.hour];
     }
+
+    return updatedRemarks;
+  };
+
+  const saveRemark = async () => {
+    const updatedRemarks = updateRemarkEntry(remarks, remarkModal.day, remarkModal.hour, remarkModal.text);
+    setRemarks(updatedRemarks);
+    setRemarkModal({ isOpen: false, day: null, hour: null, text: '' });
+    await saveDataToFirestore(
+      userId,
+      { hours, extraMinutes, breaks, remarks: updatedRemarks },
+      currentWeek.index,
+      currentWeek.year
+    );
+  };
+
+  const deleteRemark = async () => {
+    const updatedRemarks = updateRemarkEntry(remarks, remarkModal.day, remarkModal.hour, '');
     setRemarks(updatedRemarks);
     setRemarkModal({ isOpen: false, day: null, hour: null, text: '' });
     await saveDataToFirestore(
@@ -977,6 +999,7 @@ function MainPage({ userId }) {
             />
             <div className="confirm-dialog-buttons">
               <button onClick={saveRemark}>Save</button>
+              <button onClick={deleteRemark}>Delete</button>
               <button onClick={() => setRemarkModal({ isOpen: false, day: null, hour: null, text: '' })}>Cancel</button>
             </div>
           </div>
